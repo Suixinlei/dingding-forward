@@ -1,0 +1,7 @@
+name = "dingtalk-forward"  
+main = "forward.js"
+compatibility_date = "2023-01-01"  
+
+[vars]  
+# 开发环境变量（不要包含敏感信息）  
+ENVIRONMENT = "development"
