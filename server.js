@@ -7,10 +7,11 @@ const port = process.env.PORT || 3000;
 // 初始化 Miniflare  
 const mf = new Miniflare({  
   modules: true,  
-  scriptPath: "./worker.js",  
-  bindings: {  
-    // 在这里添加你的环境变量  
-    API_KEY: process.env.API_KEY,  
+  scriptPath: "./index.js",  
+  bindings: {
+    BOT_1_SECRET: process.env.BOT_1_SECRET,
+    OUTGOING_1_SECRET: process.env.OUTGOING_1_SECRET,
+    SEND_URL_1: process.env.SEND_URL_1,
   },  
 });  
 
