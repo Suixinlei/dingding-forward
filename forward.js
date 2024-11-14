@@ -137,7 +137,8 @@ async function forwardToDingtalk(message, targetWebhook, botSecret) {
 }  
 
 export default {  
-  async fetch(request, env) {  
+  async fetch(request, env) {
+    console.log('request', request);
     // 处理 OPTIONS 请求  
     if (request.method === 'OPTIONS') {  
       return new Response(null, {  
