@@ -1,5 +1,6 @@
 {
   "scripts": {
+    "start": "node server.js",
     "dev": "wrangler dev",
     "proxy": "ngrok http 8787"
   },
@@ -7,5 +8,9 @@
     "axios": "^1.7.7",
     "ngrok": "^5.0.0-beta.2",
     "wrangler": "^3.86.1"
+  },
+  "dependencies": {
+    "express": "^4.21.1",
+    "miniflare": "^3.20241106.0"
   }
 }
