@@ -157,7 +157,7 @@ export default {
 
     try {  
       const clonedRequest = request.clone();  
-      const rawBody = await clonedRequest.text();  
+      const rawBody = await clonedRequest.json();  
       
       // 验证来自群的消息签名  
       const isValid = await verifyOutgoingSignature(  
@@ -187,7 +187,7 @@ export default {
       const forwardMessage = buildForwardMessage(content, senderInfo);  
 
       // 转发到目标群  
-      const result = await forwardToDingtalk(  
+      const result = await forwardToDingtalk(
         forwardMessage,  
         env.SEND_URL_1,  
         env.BOT_1_SECRET  

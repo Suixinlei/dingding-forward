@@ -1,4 +1,8 @@
 {
+  "scripts": {
+    "dev": "wrangler dev",
+    "proxy": "ngrok http 8787"
+  },
   "devDependencies": {
     "axios": "^1.7.7",
     "wrangler": "^3.86.1"
