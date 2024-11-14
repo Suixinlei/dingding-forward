@@ -1,4 +1,4 @@
-name = "dingtalk-forward"  
+name = "dingding-forward"
 main = "forward.js"
 compatibility_date = "2023-01-01"  
 
