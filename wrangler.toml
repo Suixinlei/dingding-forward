@@ -1,5 +1,5 @@
 name = "dingding-forward"
-main = "forward.js"
+main = "index.js"
 compatibility_date = "2023-01-01"  
 
 [vars]  

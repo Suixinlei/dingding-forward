@@ -137,7 +137,7 @@ async function forwardToDingtalk(message, targetWebhook, botSecret) {
 }  
 
 export default {  
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     console.log('request', request);
     // 处理 OPTIONS 请求  
     if (request.method === 'OPTIONS') {  
@@ -152,10 +152,11 @@ export default {
       return new Response('Method not allowed', {  
         status: 405,  
         headers: corsHeaders(),  
-      });  
+      });
     }  
 
-    try {  
+    try {
+      // 克隆请求对象，因为读取body会消耗掉body内容  
       const clonedRequest = request.clone();  
       const rawBody = await clonedRequest.json();  
       
@@ -164,7 +165,7 @@ export default {
         request,  
         rawBody,  
         env.OUTGOING_1_SECRET  
-      );  
+      );
 
       if (!isValid) {  
         return new Response('Invalid signature', {  
