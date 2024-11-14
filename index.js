@@ -1,3 +1,32 @@
+function sendDingMessage(message) {
+  // 解析原始消息  
+  const parts = message.map(part => { 
+    if (part.text) {
+      return {
+        text: part.text.replace('@转发机器人', ''),
+      };
+    }
+    if (part.type === 'picture') {  
+      return {  
+        type: 'image',  
+        // TODO: 需要转换 downloadCode 为真实图片 URL
+        // url: `https://image.dingtalk.com/download/${part.pictureDownloadCode}`
+      };
+    }  
+    return part;  
+  });  
+
+  // 构造新消息  
+  const markdown = parts.map(part => {  
+    if (part.type === 'image') {  
+      return `\n[未能识别的图片内容]\n`;  
+    }  
+    return part.text;  
+  }).join('\n');
+
+  return markdown; 
+}  
+
 // 处理CORS响应头
 function corsHeaders() {
   return {
@@ -28,29 +57,17 @@ async function calculateBotSignature(timestamp, secret) {
 }
 
 // 验证来自群的消息签名
-async function verifyOutgoingSignature(request, content, secret) {
-  const timestamp = request.headers.get('timestamp');
-  const sign = request.headers.get('sign');
+async function verifyOutgoingSignature(request, secret) {
+  const token = request.headers.get('token');
 
-  if (!timestamp || !sign) {
-    return false;
+  if (token === secret) {
+    return true;
   }
-
-  // 钉钉outgoing签名计算规则：把timestamp、token和请求体拼接后做SHA256
-  const stringToSign = `${timestamp}\n${secret}\n${content}`;
-  const encoder = new TextEncoder();
-  const data = encoder.encode(stringToSign);
-  
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const calculatedSign = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-  return sign.toLowerCase() === calculatedSign.toLowerCase();
+  return false;
 }
 
 // 构建转发消息  
-function buildForwardMessage(content, senderInfo) {  
-  console.log('buildForwardMessage:', content, senderInfo);
+function buildForwardMessage(content, senderInfo) {
   // 基于原始消息类型构建转发消息  
   const baseMessage = {  
     msgtype: content.msgtype  
@@ -71,37 +88,26 @@ function buildForwardMessage(content, senderInfo) {
       };  
       break;  
     
-    case 'link':  
-      baseMessage.link = {  
-        ...content.link,  
-        text: `来自 @${senderInfo.senderNick} 的链接：\n${content.link.text}`  
-      };  
-      break;  
+    case 'richText':
+      baseMessage.msgtype = 'markdown';
+      baseMessage.markdown = {
+        title: '转发消息',
+        text: `#### 来自 @${senderInfo.senderNick} 的消息：\n\n ${sendDingMessage(content.content.richText)}`,
+      };
+      break;
     
-    case 'actionCard':  
-      if (content.actionCard.btns) {  
-        // 整体跳转的actionCard  
-        baseMessage.actionCard = {  
-          ...content.actionCard,  
-          text: `#### 来自 @${senderInfo.senderNick} 的卡片消息：\n${content.actionCard.text}`  
-        };  
-      } else {  
-        // 独立跳转的actionCard  
-        baseMessage.actionCard = {  
-          ...content.actionCard,  
-          text: `#### 来自 @${senderInfo.senderNick} 的卡片消息：\n${content.actionCard.text}`  
-        };  
-      }  
-      break;  
-    
-    case 'feedCard':  
-      baseMessage.feedCard = content.feedCard;  
-      break;  
+    case 'image':
+      baseMessage.msgtype = 'markdown';
+      baseMessage.markdown = {
+        title: '转发消息',
+        text: `#### 来自 @${senderInfo.senderNick} 的消息：\n\n 无法识别的图片内容`,
+      };
+      break;
     
     default:  
       // 对于未知类型，降级为文本消息  
       baseMessage.msgtype = 'text';  
-      baseMessage.text = {  
+      baseMessage.text = {
         content: `来自 @${senderInfo.senderNick} 的未知类型消息`  
       };  
   }  
@@ -116,14 +122,13 @@ async function forwardToDingtalk(message, targetWebhook, botSecret) {
     const sign = await calculateBotSignature(timestamp, botSecret);  
     
     const webhookUrl = `${targetWebhook}&timestamp=${timestamp}&sign=${encodeURIComponent(sign)}`;  
-
     const response = await fetch(webhookUrl, {  
       method: 'POST',  
       headers: {  
         'Content-Type': 'application/json',  
       },  
       body: JSON.stringify(message),  
-    });  
+    });
 
     if (!response.ok) {  
       throw new Error(`HTTP error! status: ${response.status}`);  
@@ -138,7 +143,6 @@ async function forwardToDingtalk(message, targetWebhook, botSecret) {
 
 export default {  
   async fetch(request, env, ctx) {
-    console.log('request', request);
     // 处理 OPTIONS 请求  
     if (request.method === 'OPTIONS') {  
       return new Response(null, {  
@@ -158,13 +162,12 @@ export default {
     try {
       // 克隆请求对象，因为读取body会消耗掉body内容  
       const clonedRequest = request.clone();  
-      const rawBody = await clonedRequest.json();  
+      const content = await clonedRequest.json(); 
       
       // 验证来自群的消息签名  
       const isValid = await verifyOutgoingSignature(  
-        request,  
-        rawBody,  
-        env.OUTGOING_1_SECRET  
+        request, 
+        env.OUTGOING_1_SECRET
       );
 
       if (!isValid) {  
@@ -174,9 +177,6 @@ export default {
         });  
       }  
 
-      // 解析消息内容  
-      const content = JSON.parse(rawBody);  
-
       // 构建发送者信息  
       const senderInfo = {  
         senderNick: content.senderNick,  
@@ -185,16 +185,16 @@ export default {
       };  
 
       // 构建转发消息  
-      const forwardMessage = buildForwardMessage(content, senderInfo);  
+      const forwardMessage = buildForwardMessage(content, senderInfo);
 
       // 转发到目标群  
-      const result = await forwardToDingtalk(
+      await forwardToDingtalk(
         forwardMessage,  
         env.SEND_URL_1,  
-        env.BOT_1_SECRET  
-      );  
+        env.BOT_1_SECRET
+      );
 
-      return new Response(JSON.stringify(result), {  
+      return new Response('已发送', {  
         status: 200,  
         headers: {  
           'Content-Type': 'application/json',  
