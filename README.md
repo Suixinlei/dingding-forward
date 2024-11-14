@@ -7,9 +7,6 @@
 - 支持多种钉钉消息类型的转发：
   - 文本消息 (text)
   - Markdown 消息
-  - 链接消息 (link)
-  - 卡片消息 (actionCard)
-  - 图文消息 (feedCard)
 - 自动添加发送者信息
 - 完整的安全验证机制
 - 基于 Cloudflare Workers 的无服务器部署
