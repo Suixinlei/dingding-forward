@@ -1,161 +1,106 @@
 # DingTalk Message Forwarder
 
-一个基于 Cloudflare Workers 的钉钉群消息转发服务，支持多种消息类型的转发，并保持原始消息格式。
+一个用于转发钉钉机器人消息的 Node.js 服务。
 
-## 功能特点
+## Docker 部署
 
-- 支持多种钉钉消息类型的转发：
-  - 文本消息 (text)
-  - Markdown 消息
-- 自动添加发送者信息
-- 完整的安全验证机制
-- 基于 Cloudflare Workers 的无服务器部署
-- 支持 CORS 跨域请求
-- 自动维护消息格式
-
-## 快速开始
-
-### 前置要求
-
-- Cloudflare 账号
-- 钉钉机器人配置权限
-- Node.js 环境 (用于本地开发)
-
-### 安装部署
-
-1. 克隆项目：
+1. 构建镜像：
 ```bash
-git clone https://github.com/yourusername/dingding-forward.git
-cd dingding-forward
+docker build -t dingtalk-forwarder .
 ```
 
-2. 安装依赖：
+2. 运行容器（注入环境变量）：
 ```bash
-npm install
+docker run -d \
+  -p 8787:8787 \
+  -e OUTGOING_SECRET="your-outgoing-secret" \
+  -e SEND_URL_1="https://oapi.dingtalk.com/robot/send?access_token=your-token-1" \
+  -e BOT_SEC_1="your-bot-secret-1" \
+  -e SEND_URL_2="https://oapi.dingtalk.com/robot/send?access_token=your-token-2" \
+  -e BOT_SEC_2="your-bot-secret-2" \
+  dingtalk-forwarder
 ```
 
-3. 配置环境变量：
-创建 `.dev.vars` 文件（本地开发）或在 Cloudflare Workers 控制台配置以下环境变量：
-```
-OUTGOING_1_SECRET=你的群机器人outgoing密钥
-SEND_URL_1=目标群机器人webhook地址
-BOT_1_SECRET=目标群机器人签名密钥
+或者使用 docker-compose：
+
+```yaml
+# docker-compose.yml
+version: '3'
+services:
+  app:
+    build: .
+    ports:
+      - "8787:8787"
+    environment:
+      - OUTGOING_SECRET=your-outgoing-secret
+      - SEND_URL_1=https://oapi.dingtalk.com/robot/send?access_token=your-token-1
+      - BOT_SEC_1=your-bot-secret-1
+      - SEND_URL_2=https://oapi.dingtalk.com/robot/send?access_token=your-token-2
+      - BOT_SEC_2=your-bot-secret-2
 ```
 
-4. 部署到 Cloudflare Workers：
+然后运行：
 ```bash
-wrangler deploy
+docker-compose up -d
 ```
 
-### 配置钉钉机器人
+你也可以创建一个 `.env` 文件来管理环境变量：
 
-1. 源群机器人配置：
-   - 创建 Outgoing 机器人
-   - 配置安全设置为"加签"模式
-   - 记录 outgoing token
-   - 配置回调地址为 Workers URL
+```env
+OUTGOING_SECRET=your-outgoing-secret
+SEND_URL_1=https://oapi.dingtalk.com/robot/send?access_token=your-token-1
+BOT_SEC_1=your-bot-secret-1
+SEND_URL_2=https://oapi.dingtalk.com/robot/send?access_token=your-token-2
+BOT_SEC_2=your-bot-secret-2
+```
 
-2. 目标群机器人配置：
-   - 创建自定义机器人
-   - 配置安全设置为"加签"模式
-   - 记录 webhook 地址和签名密钥
-
-## 开发调试
-
-### 本地开发
-
-1. 启动本地开发服务器：
+然后在运行时引用：
 ```bash
-wrangler dev
+docker run --env-file .env -p 8787:8787 dingtalk-forwarder
 ```
 
-2. 使用 ngrok 进行本地调试：
-```bash
-ngrok http 8787
+或在 docker-compose.yml 中引用：
+```yaml
+version: '3'
+services:
+  app:
+    build: .
+    ports:
+      - "8787:8787"
+    env_file:
+      - .env
 ```
 
-3. 将 ngrok 生成的地址配置到钉钉机器人回调地址
+## 环境变量说明
 
-### 测试消息转发
+- `OUTGOING_SECRET`: 机器人安全设置中的加签密钥
+- `SEND_URL_1`: 第一个机器人的 Webhook 地址
+- `BOT_SEC_1`: 第一个机器人的安全密钥
+- `SEND_URL_2`: 第二个机器人的 Webhook 地址
+- `BOT_SEC_2`: 第二个机器人的安全密钥
 
-可以使用 curl 测试消息转发：
+## API 接口
 
-```bash
-curl -X POST \
-  -H "Content-Type: application/json" \
-  -H "timestamp: $(date +%s000)" \
-  -H "sign: YOUR_SIGN" \
-  -d '{"msgtype":"text","text":{"content":"测试消息"}}' \
-  https://your-worker.workers.dev
+### 健康检查
+```
+GET /
+```
+返回简单的问候消息，用于检查服务是否正常运行。
+
+### 消息转发接口
+
+1. 从机器人1转发到机器人2
+```
+POST /api/from-1-to-2
 ```
 
-## 支持的消息类型
-
-1. 文本消息
-```json
-{
-  "msgtype": "text",
-  "text": {
-    "content": "消息内容"
-  }
-}
+2. 从机器人2转发到机器人1
+```
+POST /api/from-2-to-1
 ```
 
-2. Markdown 消息
-```json
-{
-  "msgtype": "markdown",
-  "markdown": {
-    "title": "标题",
-    "text": "### 内容"
-  }
-}
-```
+请求体格式应符合钉钉机器人消息格式规范。
 
-3. 链接消息
-```json
-{
-  "msgtype": "link",
-  "link": {
-    "title": "标题",
-    "text": "描述",
-    "picUrl": "图片URL",
-    "messageUrl": "跳转URL"
-  }
-}
-```
+## License
 
-更多消息类型请参考[钉钉开发文档](https://open.dingtalk.com/document/robots/custom-robot-access#title-72m-8ag-pqw)。
-
-## 注意事项
-
-1. 安全性
-   - 请妥善保管各类密钥
-   - 建议定期更换密钥
-   - 使用 HTTPS 进行通信
-
-2. 限制
-   - 消息内容需符合钉钉机器人规范
-   - 注意钉钉机器人的频率限制
-   - 部分高级功能可能需要钉钉企业版
-
-3. 故障排查
-   - 检查环境变量配置
-   - 验证签名计算是否正确
-   - 查看 Cloudflare Workers 日志
-
-## 贡献指南
-
-欢迎提交 Issue 和 Pull Request。在提交 PR 前，请确保：
-
-- 代码符合项目规范
-- 添加必要的测试
-- 更新相关文档
-
-## 许可证
-
-MIT License
-
-## 联系方式
-
-如有问题，请提交 Issue 或联系维护者。
+MIT
