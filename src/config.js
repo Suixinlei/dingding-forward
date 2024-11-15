@@ -35,4 +35,8 @@ if (missing.length > 0) {
   throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
 }
 
+console.log('当前的环境变量:');
+console.log(process.env);
+console.log('------------------');
+
 module.exports = process.env;

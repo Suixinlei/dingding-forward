@@ -31,6 +31,8 @@ app.post('/api/from-1-to-2', async (req, res, next) => {
       SEND_URL: env.SEND_URL_2,
       BOT_SECRET: env.BOT_SEC_2,
     });
+
+    console.log('result:', result);
     
     // 假设 forward 函数返回的是 Response 对象，需要适配
     if (result instanceof Response) {
@@ -55,6 +57,8 @@ app.post('/api/from-2-to-1', async (req, res, next) => {
       SEND_URL: env.SEND_URL_1,
       BOT_SECRET: env.BOT_SEC_1,
     });
+
+    console.log('result:', result);
     
     // 假设 forward 函数返回的是 Response 对象，需要适配
     if (result instanceof Response) {
