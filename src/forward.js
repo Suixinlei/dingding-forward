@@ -1,3 +1,5 @@
+const crypto = require('crypto');
+
 function sendDingMessage(message) {
   // 解析原始消息  
   const parts = message.map(part => {
