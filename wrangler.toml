@@ -1,5 +1,5 @@
 name = "dingding-forward"
-main = "index.js"
+main = "router.js"
 compatibility_date = "2023-01-01"  
 
 [vars]  

@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "start": "node server.js",
+    "start": "NODE_ENV=production node ./src/router.js",
     "dev": "wrangler dev",
     "proxy": "ngrok http 8787"
   },
@@ -10,7 +10,8 @@
     "wrangler": "^3.86.1"
   },
   "dependencies": {
-    "express": "^4.21.1",
-    "miniflare": "^3.20241106.0"
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1"
   }
 }
